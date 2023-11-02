@@ -5,6 +5,8 @@ import json
 import pytorch_lightning as pl
 import torchvision.transforms as T
 import torch.nn.functional as F
+import torchvision
+from sklearn.model_selection import train_test_split
 
 from pathlib import Path
 from torchvision.datasets import ImageFolder
@@ -85,6 +87,8 @@ class LitDataModule(pl.LightningDataModule):
         careful not to execute things like random split twice!
         """
 
+        RANDOM_SEED = 42
+
         data_path = self.data_path
 
         train_data_dir = data_path + "/train"
@@ -96,10 +100,25 @@ class LitDataModule(pl.LightningDataModule):
         test_count = self.get_num_files(test_data_dir)
 
         if not self.train_dataset and not self.val_dataset and not self.test_dataset:
-            trainset = ImageFolder(self.train_data_dir, transform=self.train_transform)
-            valset = ImageFolder(self.val_data_dir, transform=self.val_transform)
-            testset = ImageFolder(self.test_data_dir, transform=self.val_transform)
+            trainset = torchvision.datasets.CIFAR10(
+                root="./", train=True, download=True, transform=self.train_transform
+            )
+            testset = torchvision.datasets.CIFAR10(
+                root="./", train=False, download=True, transform=self.val_transform
+            )
+            # trainset = ImageFolder(self.train_data_dir, transform=self.train_transform)
+            # valset = ImageFolder(self.val_data_dir, transform=self.val_transform)
+            # testset = ImageFolder(self.test_data_dir, transform=self.val_transform)
 
+            y = trainset.targets
+            valset, testset, y_val, y_test = train_test_split(
+                testset,
+                y,
+                stratify=y,
+                shuffle=True,
+                test_size=0.2,
+                random_state=RANDOM_SEED,
+            )
             self.train_dataset, self.val_dataset, self.test_dataset = (
                 trainset,
                 valset,
